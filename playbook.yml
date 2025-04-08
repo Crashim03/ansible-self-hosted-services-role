@@ -1,0 +1,23 @@
+- name: Setup homelab
+  hosts: all
+  become: true
+  pre_tasks:
+    - name: Update System
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: true
+
+    - name: Install python package
+      ansible.builtin.apt:
+        name: python3-requests
+        state: present
+
+    - name: Install ufw
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+
+  roles:
+    - darkhonor.nginx_proxy_manager
+  vars:
+    valid_sources: []

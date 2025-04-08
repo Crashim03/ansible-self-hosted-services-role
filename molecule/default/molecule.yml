@@ -1,0 +1,20 @@
+dependency:
+  name: galaxy
+  options:
+    requirements-file: molecule_requirements.yml
+platforms:
+  - name: molecule-ubuntu
+    image: python:3.9
+    groups:
+      - molecule
+    priviledge: true
+
+provisioner:
+  name: ansible
+  inventory:
+    host_vars:
+      molecule-ubuntu:
+        docker_storage_driver: vfs
+        ansible_connection: docker
+  playbooks:
+    converge: ../../playbook.yml
