@@ -1,4 +1,4 @@
 ansible_env/
 .ansible/
 .vscode/
-hosts.ini
+hosts.yml

@@ -13,7 +13,7 @@
         state: started
         command: sleep 1d
         log_driver: json-file
-        volumes: [/var/run/docker.sock:/var/run/docker.sock ]
+        volumes: [/var/run/docker.sock:/var/run/docker.sock]
       register: result
       loop: "{{ molecule_yml.platforms }}"
 

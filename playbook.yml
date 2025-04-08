@@ -12,12 +12,8 @@
         name: python3-requests
         state: present
 
-    - name: Install ufw
-      ansible.builtin.apt:
-        name: ufw
-        state: present
-
   roles:
     - darkhonor.nginx_proxy_manager
   vars:
+    enable_ufw: false
     valid_sources: []
