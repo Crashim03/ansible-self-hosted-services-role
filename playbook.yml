@@ -2,6 +2,10 @@
   hosts: all
   become: true
   pre_tasks:
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: vars.yml
+
     - name: Update System
       ansible.builtin.apt:
         update_cache: true
@@ -12,8 +16,113 @@
         name: python3-requests
         state: present
 
+    - name: Install required dependencies
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+        update_cache: true
+
+    - name: Get DEB architecture
+      ansible.builtin.shell: |
+        dpkg --print-architecture > /etc/apt/architecture_check
+      args:
+        creates: /etc/apt/architecture_check
+      register: deb_architecture
+
+    - name: Read saved architecture
+      ansible.builtin.slurp:
+        src: /etc/apt/architecture_check
+      register: deb_architecture_file
+
+    - name: Set deb_architecture fact
+      ansible.builtin.set_fact:
+        deb_architecture: "{{ deb_architecture_file['content'] | b64decode | trim }}"
+
+    - name: Check distribution
+      ansible.builtin.set_fact:
+        distribution: Debian
+        distribution_release: bullseye
+      when: ansible_distribution == "Kali" and ansible_distribution_release == "kali-rolling"
+
+    - name: Set default distribution values
+      ansible.builtin.set_fact:
+        distribution: "{{ ansible_distribution }}"
+        distribution_release: "{{ ansible_distribution_release }}"
+      when: distribution is not defined and distribution_release is not defined
+
+    - name: Create directory for Docker's GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Add Docker's official GPG key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/{{ distribution | lower }}/gpg
+        state: present
+
+    - name: Add repository into sources list
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ deb_architecture }}] https://download.docker.com/linux/{{ distribution | lower }} {{ distribution_release }} stable"
+        state: present
+        filename: docker
+
+    - name: Update Apt package list
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install Docker CE, CLI, containerd, buildx, and compose
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
   roles:
     - darkhonor.nginx_proxy_manager
   vars:
     enable_ufw: false
     valid_sources: []
+
+  tasks:
+    - name: Check if remote services folder exists
+      ansible.builtin.stat:
+        path: '{{ remote_services_folder }}'
+      register: remote_services_folder_stat
+
+    - name: List services previously added in remote services folder
+      ansible.builtin.find:
+        paths: '{{ remote_services_folder }}'
+      register: services
+      when: remote_services_folder_stat.stat.exists
+
+    - name: Compose down all services
+      community.docker.docker_compose_v2:
+        project_src: '{{ remote_services_folder }}'
+        files: "{{ services.files | map(attribute='path') | list }}"
+        state: absent
+      changed_when: false
+      when: services.files is defined and services.files | length > 0
+
+    - name: Copy docker compose files
+      ansible.builtin.copy:
+        src: '{{ local_services_folder }}'
+        dest: '{{ remote_services_folder }}'
+        mode: '0644'
+
+    - name: List services in remote services folder
+      ansible.builtin.find:
+        paths: '{{ remote_services_folder }}'
+      register: services
+
+    - name: Compose up all services
+      community.docker.docker_compose_v2:
+        project_src: '{{ remote_services_folder }}'
+        files: "{{ services.files | map(attribute='path') | list }}"
+      changed_when: false
