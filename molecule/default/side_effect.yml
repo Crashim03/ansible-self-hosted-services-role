@@ -1,25 +1,21 @@
 - name: Destroy molecule containers
   hosts: molecule
   gather_facts: false
-  pre_tasks:
-    - name: Include vars
-      ansible.builtin.include_vars:
-        file: ../../vars.yml
-  tasks:
+  tasks: # Change paths if needed
     - name: Check if remote services folder exists
       ansible.builtin.stat:
-        path: '{{ remote_services_folder }}'
+        path: '/opt/services/'
       register: remote_services_folder_stat
 
     - name: List services previously added in remote services folder
       ansible.builtin.find:
-        paths: '{{ remote_services_folder }}'
+        paths: '/opt/services/'
       register: services
       when: remote_services_folder_stat.stat.exists
 
     - name: Compose down all services
       community.docker.docker_compose_v2:
-        project_src: '{{ remote_services_folder }}'
+        project_src: '/opt/services/'
         files: "{{ services.files | map(attribute='path') | list }}"
         state: absent
       when: services.files is defined and services.files | length > 0

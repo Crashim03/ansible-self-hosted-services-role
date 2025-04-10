@@ -3,3 +3,4 @@ ansible_env/
 .vscode/
 hosts.yml
 services/
+vars.yml
