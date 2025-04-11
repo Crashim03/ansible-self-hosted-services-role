@@ -126,9 +126,12 @@
         paths: '{{ remote_services_folder }}'
       register: services
 
-    - name: Create networks
+    - name: Create networks and attach them to nginx proxy manager
       community.docker.docker_network:
         name: '{{ item }}'
+        connected: true
+        containers:
+          - name: nginx_proxy
       loop: '{{ networks }}'
 
     - name: Compose up all services
