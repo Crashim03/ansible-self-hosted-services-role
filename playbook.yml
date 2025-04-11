@@ -93,6 +93,7 @@
     local_services_folder: services/
     remote_services_folder: /opt/services/
     github_repo_services: []
+    networks: []
 
   tasks:
     - name: Check if remote services folder exists
@@ -124,6 +125,11 @@
       ansible.builtin.find:
         paths: '{{ remote_services_folder }}'
       register: services
+
+    - name: Create networks
+      community.docker.docker_network:
+        name: '{{ item }}'
+      loop: '{{ networks }}'
 
     - name: Compose up all services
       community.docker.docker_compose_v2:
